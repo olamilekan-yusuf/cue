@@ -1,6 +1,6 @@
 name: cue
-description: "Fork of Milad-Akarie/cue with a CueController.animationsDisabled switch for app-wide instant animation stop."
-version: 0.4.0-yohanna.1
+description: "Physics-first Flutter animations with a composable, timeline-driven API"
+version: 0.4.0
 homepage: https://github.com/Milad-Akarie/cue
 topics: 
   - animation
