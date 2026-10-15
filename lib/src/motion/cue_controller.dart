@@ -33,6 +33,14 @@ import 'package:flutter/widgets.dart';
 /// Cue widgets handle all of this seamlessly. If using the controller manually,
 /// be aware of track staleness after rebuilds.
 class CueController extends AnimationController {
+  /// Global switch to disable Cue animations app-wide.
+  ///
+  /// When `true`, [forward], [reverse], [repeat], [animateTo], and [fling]
+  /// skip straight to their target value instead of ticking through the
+  /// timeline, instead of merely slowing down via [timeDilation]. Flip this
+  /// alongside your app's existing reduced-motion switch.
+  static bool animationsDisabled = false;
+
   late CueTimeline _timeline;
 
   /// The managed Cue timeline.
@@ -332,6 +340,10 @@ class CueController extends AnimationController {
     }
     _allowDriveByFling = false;
     _timeline.prepare(forward: true, from: from, velocity: velocity);
+    if (animationsDisabled) {
+      setProgress(1.0, forward: true);
+      return TickerFuture.complete();
+    }
     return super.animateWith(_timeline);
   }
 
@@ -347,6 +359,10 @@ class CueController extends AnimationController {
     }
     _allowDriveByFling = false;
     _timeline.prepare(forward: false, from: from, velocity: velocity);
+    if (animationsDisabled) {
+      setProgress(0.0, forward: false);
+      return TickerFuture.complete();
+    }
     return super.animateBackWith(_timeline);
   }
 
@@ -393,6 +409,13 @@ class CueController extends AnimationController {
     assert(count == null || count > 0, 'The "count" value must be greater than 0. Received: $count');
     _allowDriveByFling = false;
     _timeline.willAnimate(forward: true);
+    if (animationsDisabled) {
+      // A disabled, infinitely-repeating animation has no meaningful "end"
+      // state — settle once at the forward target instead of looping.
+      _timeline.prepare(forward: true, from: min, target: max);
+      setProgress(max ?? 1.0, forward: true);
+      return TickerFuture.complete();
+    }
     _timeline.prepareForRepeat(RepeatConfig(reverse: reverse, count: count, from: min, target: max));
     return super.animateWith(_timeline);
   }
@@ -422,6 +445,10 @@ class CueController extends AnimationController {
     forward ??= target > value;
     _timeline.willAnimate(forward: forward);
     _timeline.prepare(forward: forward, target: target);
+    if (animationsDisabled) {
+      setProgress(target, forward: forward);
+      return TickerFuture.complete();
+    }
     if (forward) {
       return super.animateWith(_timeline);
     } else {
@@ -445,6 +472,10 @@ class CueController extends AnimationController {
     SpringDescription? springDescription,
     AnimationBehavior? animationBehavior,
   }) {
+    if (animationsDisabled) {
+      setProgress(velocity < 0.0 ? 0.0 : 1.0, forward: velocity >= 0.0);
+      return TickerFuture.complete();
+    }
     _allowDriveByFling = true;
     springDescription ??= SpringDescription.withDampingRatio(
       mass: 1.0,
